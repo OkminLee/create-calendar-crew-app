@@ -1,0 +1,21 @@
+{
+  "name": "create-calendar-crew-app",
+  "version": "1.0.0",
+  "description": "범용 캘린더 기반 참여 신청 웹앱 생성기 (Calendar-based event registration app generator)",
+  "author": {
+    "name": "okminlee"
+  },
+  "repository": "https://github.com/okminlee/create-calendar-crew-app",
+  "license": "MIT",
+  "keywords": [
+    "calendar",
+    "crew",
+    "pwa",
+    "react",
+    "cloudflare-workers",
+    "firebase",
+    "code-generator",
+    "korean"
+  ],
+  "skills": "./skills/"
+}
