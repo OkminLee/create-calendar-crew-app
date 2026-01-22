@@ -134,6 +134,14 @@ Claude: 새로운 캘린더 참여 앱을 생성합니다. 몇 가지 설정이 
 
 <instructions>
 
+### Plugin 템플릿 경로
+
+**중요**: 이 스킬은 Plugin으로 설치되어 있습니다. 템플릿 파일은 다음 경로에 있습니다:
+- 프론트엔드 템플릿: `${CLAUDE_PLUGIN_ROOT}/templates/frontend/`
+- Worker 템플릿: `${CLAUDE_PLUGIN_ROOT}/templates/worker/`
+
+템플릿 파일을 읽을 때 `${CLAUDE_PLUGIN_ROOT}` 환경 변수를 사용하여 절대 경로를 구성하세요.
+
 ### Phase 1: 설정 수집
 
 AskUserQuestion 도구를 사용하여 다음 정보를 순차적으로 수집합니다:
@@ -181,29 +189,43 @@ MCP 서버 가용성을 확인합니다:
 
 수집된 설정을 기반으로 프로젝트를 생성합니다.
 
-#### 3.1 디렉토리 구조 생성
+#### 3.1 템플릿 파일 읽기
+
+먼저 `${CLAUDE_PLUGIN_ROOT}/templates/` 디렉토리에서 필요한 템플릿 파일들을 읽습니다:
+- `templates/frontend/src/App.tsx.template`
+- `templates/frontend/src/config/app.config.ts.template`
+- `templates/frontend/package.json.template`
+- `templates/frontend/vite.config.ts.template`
+- `templates/frontend/tailwind.config.js.template`
+- 기타 필요한 템플릿 파일들
+
+#### 3.2 디렉토리 구조 생성
 
 ```bash
 mkdir -p {project-path}/{frontend,worker}/src
 ```
 
-#### 3.2 프론트엔드 생성
+#### 3.3 프론트엔드 생성
 
-**config/app.config.ts** - 앱 설정 (템플릿 변수 치환)
-```typescript
-export const APP_CONFIG = {
-  name: '{{APP_NAME}}',
-  description: '{{APP_DESCRIPTION}}',
-  eventName: '{{EVENT_NAME}}',
-  eventEmoji: '{{EVENT_EMOJI}}',
-  themeColor: '{{THEME_COLOR}}',
-  features: {
-    comments: {{FEATURE_COMMENTS}},
-    notifications: {{FEATURE_NOTIFICATIONS}},
-    slack: {{FEATURE_SLACK}},
-  },
-} as const;
-```
+템플릿 파일을 읽고 다음 변수들을 치환하여 파일을 생성합니다:
+
+**템플릿 변수 목록:**
+- `{{APP_NAME}}` - 앱 이름
+- `{{APP_NAME_KEBAB}}` - 앱 이름 (kebab-case)
+- `{{APP_DESCRIPTION}}` - 앱 설명
+- `{{APP_SHORT_NAME}}` - 짧은 앱 이름
+- `{{EVENT_NAME}}` - 이벤트 이름
+- `{{EVENT_EMOJI}}` - 이벤트 이모지
+- `{{THEME_COLOR}}` - 테마 색상 (hex)
+- `{{PRIMARY_50}}` ~ `{{PRIMARY_900}}` - 색상 팔레트
+- `{{FEATURE_COMMENTS}}` - 댓글 기능 (true/false)
+- `{{FEATURE_NOTIFICATIONS}}` - 알림 기능 (true/false)
+- `{{FEATURE_SLACK}}` - Slack 기능 (true/false)
+
+**조건부 블록:**
+- `{{#FEATURE_COMMENTS}}...{{/FEATURE_COMMENTS}}` - 댓글 기능 선택 시만 포함
+- `{{#FEATURE_NOTIFICATIONS}}...{{/FEATURE_NOTIFICATIONS}}` - 알림 선택 시만 포함
+- `{{#ENABLE_SLACK}}...{{/ENABLE_SLACK}}` - Slack 선택 시만 포함
 
 주요 파일 생성:
 1. `package.json` - 의존성 (선택된 기능에 따라 조정)
@@ -217,7 +239,7 @@ export const APP_CONFIG = {
 9. `src/components/` - UI 컴포넌트
 10. `.env.example` - 환경변수 템플릿
 
-#### 3.3 백엔드 생성 (선택 시)
+#### 3.4 백엔드 생성 (선택 시)
 
 **Cloudflare Workers**:
 1. `wrangler.toml` - Worker 설정
@@ -227,7 +249,7 @@ export const APP_CONFIG = {
 5. `src/slack.ts` - Slack 연동 (선택 시)
 6. `package.json` - Worker 의존성
 
-#### 3.4 README.md 생성
+#### 3.5 README.md 생성
 
 - 프로젝트 설명
 - 환경 설정 가이드
@@ -264,8 +286,8 @@ export const APP_CONFIG = {
 
 ## 템플릿 파일 참조
 
-이 스킬은 `/templates` 디렉토리의 템플릿 파일을 사용합니다:
-- `templates/frontend/` - 프론트엔드 템플릿
-- `templates/worker/` - Worker 템플릿
+이 스킬은 Plugin 디렉토리 내 `templates/` 폴더의 템플릿 파일을 사용합니다:
+- `${CLAUDE_PLUGIN_ROOT}/templates/frontend/` - 프론트엔드 템플릿
+- `${CLAUDE_PLUGIN_ROOT}/templates/worker/` - Worker 템플릿
 
 템플릿 변수 형식: `{{VARIABLE_NAME}}`
