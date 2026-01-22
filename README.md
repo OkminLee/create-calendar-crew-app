@@ -10,20 +10,14 @@
 
 ## 설치
 
-`~/.claude/settings.json`에 추가:
+Claude Code에서 실행:
 
-```json
-{
-  "plugins": {
-    "create-calendar-crew-app@github:okminlee/create-calendar-crew-app": "enabled"
-  }
-}
-```
+```bash
+# Step 1: 마켓플레이스 등록
+/plugin marketplace add OkminLee/create-calendar-crew-app
 
-또는 Claude Code에서 실행:
-
-```
-/plugin install create-calendar-crew-app@github:okminlee/create-calendar-crew-app
+# Step 2: 플러그인 설치
+/plugin install create-calendar-crew-app@create-calendar-app
 ```
 
 ## 사용법
