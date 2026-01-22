@@ -1,0 +1,123 @@
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  arrayUnion,
+  arrayRemove,
+  onSnapshot,
+  Unsubscribe,
+} from 'firebase/firestore'
+import { db } from './firebase'
+import { APP_CONFIG } from '@/config/app.config'
+import type { DailyCrew, Participant } from '@/types'
+
+/**
+ * 날짜별 문서 참조
+ */
+export function getDayDocRef(dateId: string) {
+  return doc(db, APP_CONFIG.collections.dailyCrew, dateId)
+}
+
+/**
+ * 참여자 등록
+ */
+export async function registerParticipant(
+  dateId: string,
+  name: string
+): Promise<void> {
+  const docRef = getDayDocRef(dateId)
+  const docSnap = await getDoc(docRef)
+
+  const participant: Participant = {
+    name,
+    registered_at: Math.floor(Date.now() / 1000),
+  }
+
+  if (docSnap.exists()) {
+    // 이미 같은 이름이 있는지 확인
+    const data = docSnap.data() as DailyCrew
+    const exists = data.participants.some((p) => p.name === name)
+    if (exists) {
+      throw new Error('이미 등록된 이름입니다.')
+    }
+
+    await updateDoc(docRef, {
+      participants: arrayUnion(participant),
+    })
+  } else {
+    await setDoc(docRef, {
+      date_id: dateId,
+      participants: [participant],
+    })
+  }
+}
+
+/**
+ * 참여자 취소
+ */
+export async function cancelParticipant(
+  dateId: string,
+  name: string
+): Promise<void> {
+  const docRef = getDayDocRef(dateId)
+  const docSnap = await getDoc(docRef)
+
+  if (docSnap.exists()) {
+    const data = docSnap.data() as DailyCrew
+    const participantToRemove = data.participants.find((p) => p.name === name)
+
+    if (participantToRemove) {
+      await updateDoc(docRef, {
+        participants: arrayRemove(participantToRemove),
+      })
+    }
+  }
+}
+
+/**
+ * 단일 날짜 실시간 구독
+ */
+export function subscribeToDailyCrew(
+  dateId: string,
+  callback: (data: DailyCrew | null) => void
+): Unsubscribe {
+  const docRef = getDayDocRef(dateId)
+
+  return onSnapshot(
+    docRef,
+    (snapshot) => {
+      if (snapshot.exists()) {
+        callback(snapshot.data() as DailyCrew)
+      } else {
+        callback(null)
+      }
+    },
+    (error) => {
+      console.error('Firestore subscription error:', error)
+      callback(null)
+    }
+  )
+}
+
+/**
+ * 월별 데이터 일괄 구독
+ */
+export function subscribeToMonth(
+  year: number,
+  month: number,
+  callback: (dateId: string, data: DailyCrew | null) => void
+): Unsubscribe[] {
+  const unsubscribes: Unsubscribe[] = []
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateId = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    const unsub = subscribeToDailyCrew(dateId, (data) => {
+      callback(dateId, data)
+    })
+    unsubscribes.push(unsub)
+  }
+
+  return unsubscribes
+}

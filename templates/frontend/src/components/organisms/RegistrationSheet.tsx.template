@@ -1,0 +1,212 @@
+import { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
+import { X, UserPlus, UserMinus } from 'lucide-react'
+import { Button } from '@/components/atoms/Button'
+import { ParticipantChip } from '@/components/molecules/ParticipantChip'
+import { APP_CONFIG } from '@/config/app.config'
+import { useCrewStore } from '@/stores/crewStore'
+import { registerParticipant, cancelParticipant } from '@/services/firestore'
+import { parseDateId, WEEKDAY_NAMES } from '@/utils/date'
+{{#FEATURE_COMMENTS}}
+import { CommentSection } from '@/components/organisms/CommentSection'
+{{/FEATURE_COMMENTS}}
+
+interface RegistrationSheetProps {
+  dateId: string
+  savedName: string | null
+  onSaveName: (name: string) => void
+  onClose: () => void
+}
+
+export function RegistrationSheet({
+  dateId,
+  savedName,
+  onSaveName,
+  onClose,
+}: RegistrationSheetProps) {
+  const [inputName, setInputName] = useState(savedName ?? '')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showInput, setShowInput] = useState(!savedName)
+
+  const { dailyData, addToast } = useCrewStore()
+  const data = dailyData[dateId]
+  const participants = data?.participants ?? []
+
+  // 내가 이미 등록했는지 확인
+  const myRegistration = savedName
+    ? participants.find((p) => p.name === savedName)
+    : null
+
+  const date = parseDateId(dateId)
+  const formattedDate = `${date.getMonth() + 1}월 ${date.getDate()}일 (${WEEKDAY_NAMES[date.getDay()]})`
+
+  // ESC 키로 닫기
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleEsc)
+    return () => window.removeEventListener('keydown', handleEsc)
+  }, [onClose])
+
+  const handleRegister = useCallback(async (name: string) => {
+    if (!name.trim()) {
+      addToast('이름을 입력해주세요.', 'error')
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      await registerParticipant(dateId, name.trim())
+      onSaveName(name.trim())
+      addToast(`${formattedDate} 참여 등록 완료!`, 'success')
+      onClose()
+    } catch (error) {
+      if (error instanceof Error) {
+        addToast(error.message, 'error')
+      } else {
+        addToast('등록에 실패했습니다.', 'error')
+      }
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [dateId, formattedDate, onSaveName, onClose, addToast])
+
+  const handleCancel = useCallback(async () => {
+    if (!savedName) return
+
+    setIsSubmitting(true)
+    try {
+      await cancelParticipant(dateId, savedName)
+      addToast('참여가 취소되었습니다.', 'info')
+      onClose()
+    } catch (error) {
+      addToast('취소에 실패했습니다.', 'error')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [dateId, savedName, onClose, addToast])
+
+  return createPortal(
+    <div className="fixed inset-0 z-50">
+      {/* 배경 오버레이 */}
+      <div
+        className="absolute inset-0 bg-black/40 animate-fade-in"
+        onClick={onClose}
+      />
+
+      {/* 시트 */}
+      <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl animate-sheet-up safe-area-bottom">
+        <div className="p-6">
+          {/* 핸들 */}
+          <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4" />
+
+          {/* 헤더 */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
+                <span className="text-xl">{APP_CONFIG.theme.icon}</span>
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-800">{APP_CONFIG.name}</h2>
+                <p className="text-sm text-gray-500">{formattedDate}</p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X size={24} className="text-gray-500" />
+            </button>
+          </div>
+
+          {/* 현재 참여자 목록 */}
+          {participants.length > 0 && (
+            <div className="mb-6">
+              <p className="text-sm text-gray-600 mb-2">
+                현재 참여자 ({participants.length}명)
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {participants.map((p) => (
+                  <ParticipantChip
+                    key={p.name}
+                    name={p.name}
+                    isMe={p.name === savedName}
+                    onRemove={p.name === savedName ? handleCancel : undefined}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 참여/취소 액션 */}
+          {myRegistration ? (
+            // 이미 등록한 경우: 취소 버튼
+            <Button
+              variant="danger"
+              fullWidth
+              loading={isSubmitting}
+              onClick={handleCancel}
+              leftIcon={<UserMinus size={20} />}
+            >
+              참여 취소하기
+            </Button>
+          ) : showInput ? (
+            // 이름 입력 폼
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={inputName}
+                onChange={(e) => setInputName(e.target.value)}
+                placeholder="이름을 입력하세요"
+                maxLength={20}
+                className="w-full px-4 py-3 text-base border-2 border-gray-200 rounded-xl
+                  focus:border-primary-500 focus:outline-none transition-colors"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleRegister(inputName)
+                }}
+              />
+              <Button
+                fullWidth
+                loading={isSubmitting}
+                onClick={() => handleRegister(inputName)}
+                leftIcon={<UserPlus size={20} />}
+              >
+                참여하기
+              </Button>
+            </div>
+          ) : (
+            // 저장된 이름으로 빠른 등록
+            <div className="space-y-3">
+              <Button
+                fullWidth
+                loading={isSubmitting}
+                onClick={() => handleRegister(savedName!)}
+                leftIcon={<UserPlus size={20} />}
+              >
+                {savedName}님으로 참여하기
+              </Button>
+              <button
+                onClick={() => setShowInput(true)}
+                className="w-full text-center text-sm text-gray-500 hover:text-gray-700 py-2"
+              >
+                다른 이름으로 참여
+              </button>
+            </div>
+          )}
+
+{{#FEATURE_COMMENTS}}
+          {/* 댓글 섹션 */}
+          <CommentSection
+            dateId={dateId}
+            currentUser={savedName}
+            participants={participants.map((p) => p.name)}
+          />
+{{/FEATURE_COMMENTS}}
+        </div>
+      </div>
+    </div>,
+    document.body
+  )
+}

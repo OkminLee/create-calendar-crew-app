@@ -1,0 +1,147 @@
+import { useCallback, useState } from 'react'
+import { {{APP_ICON_COMPONENT}}, Settings } from 'lucide-react'
+import { Calendar } from '@/components/organisms/Calendar'
+import { RegistrationSheet } from '@/components/organisms/RegistrationSheet'
+{{#FEATURE_NOTIFICATIONS}}
+import { NotificationPrompt } from '@/components/organisms/NotificationPrompt'
+{{/FEATURE_NOTIFICATIONS}}
+import { IOSInstallGuide } from '@/components/organisms/IOSInstallGuide'
+import { SettingsSheet } from '@/components/organisms/SettingsSheet'
+import { ToastContainer } from '@/components/molecules/Toast'
+import { useUserName } from '@/hooks/useUserName'
+import { useFirestoreSubscription } from '@/hooks/useFirestoreSubscription'
+import { useNetworkStatus } from '@/hooks/useNetworkStatus'
+import { usePWAInstall } from '@/hooks/usePWAInstall'
+{{#FEATURE_NOTIFICATIONS}}
+import { useFCM } from '@/hooks/useFCM'
+{{/FEATURE_NOTIFICATIONS}}
+import { useCrewStore } from '@/stores/crewStore'
+import { APP_CONFIG } from '@/config/app.config'
+
+export default function App() {
+  const { name: savedName, saveName } = useUserName()
+  const { selectedDateId, setSelectedDateId, isLoading } = useCrewStore()
+  const { showIOSGuide, dismissIOSGuide, isInstalled } = usePWAInstall()
+{{#FEATURE_NOTIFICATIONS}}
+  const { fcmToken } = useFCM()
+{{/FEATURE_NOTIFICATIONS}}
+  const [showSettings, setShowSettings] = useState(false)
+
+  // Firestore 실시간 구독
+  useFirestoreSubscription()
+
+  // 네트워크 상태 감지
+  useNetworkStatus()
+
+  const handleDateSelect = useCallback((dateId: string) => {
+    setSelectedDateId(dateId)
+  }, [setSelectedDateId])
+
+  const handleCloseSheet = useCallback(() => {
+    setSelectedDateId(null)
+  }, [setSelectedDateId])
+
+  return (
+    <div className="min-h-screen bg-gray-50 safe-area-top safe-area-bottom">
+      {/* 헤더 */}
+      <header className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="max-w-md mx-auto px-4 py-4 flex items-center gap-3">
+          <div className="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center">
+            <{{APP_ICON_COMPONENT}} className="text-white" size={22} />
+          </div>
+          <div className="flex-1">
+            <h1 className="text-lg font-bold text-gray-800">
+              {APP_CONFIG.ui.header.title}
+            </h1>
+            <p className="text-xs text-gray-500">
+              {APP_CONFIG.ui.header.subtitle}
+            </p>
+          </div>
+          {isInstalled && (
+            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+              PWA
+            </span>
+          )}
+          <button
+            onClick={() => setShowSettings(true)}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <Settings size={20} className="text-gray-600" />
+          </button>
+        </div>
+      </header>
+
+      {/* 메인 컨텐츠 */}
+      <main className="max-w-md mx-auto px-4 py-6 space-y-4">
+{{#FEATURE_NOTIFICATIONS}}
+        {/* 알림 권한 요청 프롬프트 */}
+        <NotificationPrompt />
+{{/FEATURE_NOTIFICATIONS}}
+
+        {/* 인사말 */}
+        {savedName && (
+          <div className="p-4 bg-primary-50 rounded-xl">
+            <p className="text-sm text-primary-800">
+              {APP_CONFIG.ui.greeting.prefix}
+              <span className="font-bold">{savedName}</span>
+              {APP_CONFIG.ui.greeting.suffix} {APP_CONFIG.ui.greeting.emoji}
+            </p>
+            <p className="text-xs text-primary-600 mt-1">
+              {APP_CONFIG.ui.calendar.selectPrompt}
+            </p>
+          </div>
+        )}
+
+        {/* 캘린더 */}
+        <Calendar myName={savedName} onDateSelect={handleDateSelect} />
+
+        {/* 로딩 표시 */}
+        {isLoading && (
+          <div className="text-center text-sm text-gray-500">
+            {APP_CONFIG.ui.loading}
+          </div>
+        )}
+
+        {/* 사용 안내 (이름 미등록 시) */}
+        {!savedName && (
+          <div className="p-4 bg-white rounded-xl shadow-sm">
+            <h3 className="font-semibold text-gray-800 mb-2">
+              {APP_CONFIG.ui.onboarding.title}
+            </h3>
+            <p className="text-sm text-gray-600">
+              {APP_CONFIG.ui.onboarding.description}
+            </p>
+          </div>
+        )}
+      </main>
+
+      {/* 등록 시트 */}
+      {selectedDateId && (
+        <RegistrationSheet
+          dateId={selectedDateId}
+          savedName={savedName}
+          onSaveName={saveName}
+          onClose={handleCloseSheet}
+        />
+      )}
+
+      {/* iOS PWA 설치 가이드 */}
+      {showIOSGuide && (
+        <IOSInstallGuide onClose={dismissIOSGuide} />
+      )}
+
+      {/* 설정 시트 */}
+      {showSettings && (
+        <SettingsSheet
+{{#FEATURE_NOTIFICATIONS}}
+          fcmToken={fcmToken}
+{{/FEATURE_NOTIFICATIONS}}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
+
+      {/* 토스트 컨테이너 */}
+      <ToastContainer />
+    </div>
+  )
+}

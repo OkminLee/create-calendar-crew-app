@@ -1,0 +1,33 @@
+import { useState, useEffect, useCallback } from 'react'
+import { APP_CONFIG } from '@/config/app.config'
+
+/**
+ * Local Storage에 사용자 이름 저장/로드 훅
+ */
+export function useUserName() {
+  const [name, setName] = useState<string | null>(null)
+  const [isLoaded, setIsLoaded] = useState(false)
+
+  useEffect(() => {
+    const stored = localStorage.getItem(APP_CONFIG.storageKeys.userName)
+    if (stored) {
+      setName(stored)
+    }
+    setIsLoaded(true)
+  }, [])
+
+  const saveName = useCallback((newName: string) => {
+    const trimmed = newName.trim()
+    if (trimmed) {
+      localStorage.setItem(APP_CONFIG.storageKeys.userName, trimmed)
+      setName(trimmed)
+    }
+  }, [])
+
+  const clearName = useCallback(() => {
+    localStorage.removeItem(APP_CONFIG.storageKeys.userName)
+    setName(null)
+  }, [])
+
+  return { name, isLoaded, saveName, clearName }
+}

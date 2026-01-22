@@ -1,0 +1,53 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        // Primary color palette generated from {{THEME_COLOR}}
+        primary: {
+          50: '{{PRIMARY_50}}',
+          100: '{{PRIMARY_100}}',
+          200: '{{PRIMARY_200}}',
+          300: '{{PRIMARY_300}}',
+          400: '{{PRIMARY_400}}',
+          500: '{{THEME_COLOR}}',
+          600: '{{PRIMARY_600}}',
+          700: '{{PRIMARY_700}}',
+          800: '{{PRIMARY_800}}',
+          900: '{{PRIMARY_900}}',
+        },
+      },
+      fontFamily: {
+        sans: ['Pretendard', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+      },
+      spacing: {
+        '18': '4.5rem',
+        '22': '5.5rem',
+      },
+      animation: {
+        'chip-enter': 'chip-enter 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+        'sheet-up': 'sheet-up 0.25s ease-out',
+        'fade-in': 'fade-in 0.15s ease-out',
+      },
+      keyframes: {
+        'chip-enter': {
+          '0%': { opacity: '0', transform: 'scale(0.8)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        'sheet-up': {
+          '0%': { transform: 'translateY(100%)' },
+          '100%': { transform: 'translateY(0)' },
+        },
+        'fade-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+      },
+    },
+  },
+  plugins: [],
+}

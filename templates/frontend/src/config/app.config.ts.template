@@ -1,0 +1,64 @@
+/**
+ * 앱 설정 중앙화 파일
+ * 모든 하드코딩된 값들을 여기서 관리합니다.
+ */
+
+export const APP_CONFIG = {
+  // 앱 기본 정보
+  name: '{{APP_NAME}}',
+  shortName: '{{APP_SHORT_NAME}}',
+  description: '{{APP_DESCRIPTION}}',
+
+  // 조직 정보
+  organization: '{{ORGANIZATION_NAME}}',
+
+  // 테마 설정
+  theme: {
+    primaryColor: '{{THEME_COLOR}}',
+    icon: '{{APP_ICON}}',
+  },
+
+  // 기능 플래그
+  features: {
+    notifications: {{FEATURE_NOTIFICATIONS}},
+    comments: {{FEATURE_COMMENTS}},
+    pwaInstall: true,
+  },
+
+  // UI 텍스트
+  ui: {
+    header: {
+      title: '{{APP_SHORT_NAME}}',
+      subtitle: '{{ORGANIZATION_NAME}} {{APP_DESCRIPTION}}',
+    },
+    greeting: {
+      prefix: '안녕하세요, ',
+      suffix: '님!',
+      emoji: '{{APP_EMOJI}}',
+    },
+    calendar: {
+      selectPrompt: '날짜를 선택해서 모임에 참여하세요.',
+    },
+    onboarding: {
+      title: '처음이신가요?',
+      description: '날짜를 선택하고 이름을 입력하면 모임에 참여할 수 있어요. 한 번 입력하면 다음부터는 원클릭으로 참여 가능합니다!',
+    },
+    loading: '데이터를 불러오는 중...',
+  },
+
+  // Firebase 컬렉션 이름
+  collections: {
+    dailyCrew: '{{FIREBASE_COLLECTION_DAILY}}',
+    fcmTokens: '{{FIREBASE_COLLECTION_TOKENS}}',
+    comments: '{{FIREBASE_COLLECTION_COMMENTS}}',
+  },
+
+  // 스토리지 키
+  storageKeys: {
+    userName: '{{STORAGE_KEY_PREFIX}}_user_name',
+    iosGuide: '{{STORAGE_KEY_PREFIX}}_ios_guide_dismissed',
+    notificationPrompt: '{{STORAGE_KEY_PREFIX}}_notification_dismissed',
+  },
+} as const
+
+export type AppConfig = typeof APP_CONFIG

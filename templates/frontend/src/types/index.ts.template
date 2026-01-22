@@ -1,0 +1,33 @@
+export interface Participant {
+  name: string
+  registered_at: number // Unix timestamp
+}
+
+export interface DailyCrew {
+  date_id: string // YYYY-MM-DD
+  participants: Participant[]
+}
+
+export interface FCMToken {
+  token_id: string
+  platform: 'iOS' | 'Android' | 'Web'
+  last_updated: number
+}
+
+export type ToastType = 'success' | 'error' | 'info'
+
+export interface Toast {
+  id: string
+  message: string
+  type: ToastType
+}
+
+{{#FEATURE_COMMENTS}}
+export interface Comment {
+  id: string
+  date_id: string
+  author: string
+  content: string
+  created_at: number
+}
+{{/FEATURE_COMMENTS}}
