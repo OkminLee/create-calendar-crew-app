@@ -1,0 +1,57 @@
+/**
+ * {{EVENT_NAME}} {{EVENT_EMOJI}} recruitment message templates
+ * Hook-style questions for engagement
+ */
+
+const MESSAGES: string[] = [
+  // Humor & Wit
+  '{{EVENT_EMOJI}} {{EVENT_NAME}} 하실 분?',
+  '오늘도 {{EVENT_NAME}} 참여하실 분 모집합니다! {{EVENT_EMOJI}}',
+  '{{EVENT_NAME}} 타임입니다! 함께하실 분? {{EVENT_EMOJI}}',
+
+  // Question-style hooks
+  '혹시 오늘 {{EVENT_NAME}} 참여하실 분 계신가요? :thinking_face:',
+  '{{EVENT_NAME}} 같이 하실 분 손! :raised_hand:',
+  '오늘의 {{EVENT_NAME}}, 참여하실 분 계신가요? {{EVENT_EMOJI}}',
+
+  // Emotional & Empathetic
+  '함께 {{EVENT_NAME}} 즐기실 분 모십니다 :sparkles:',
+  '오늘도 함께해요! {{EVENT_NAME}} {{EVENT_EMOJI}}',
+
+  // Direct & Simple
+  '{{EVENT_EMOJI}} {{EVENT_NAME}} 참여자 모집!',
+  '{{EVENT_NAME}} 시간입니다! 참여하실 분은 이모지로 알려주세요 :point_down:',
+];
+
+/**
+ * Select random message
+ * @returns Randomly selected message
+ */
+export function getRandomMessage(): string {
+  const index = Math.floor(Math.random() * MESSAGES.length);
+  return MESSAGES[index];
+}
+
+/**
+ * Day-specific message (optional use)
+ * @param dayOfWeek Day of week (0: Sunday ~ 6: Saturday)
+ * @returns Day-appropriate message
+ */
+export function getDaySpecificMessage(dayOfWeek: number): string {
+  const dayMessages: Record<number, string> = {
+    1: '월요일 아침, {{EVENT_NAME}}으로 한 주를 시작해볼까요? :rocket:',
+    2: '화요일엔 화이팅! {{EVENT_NAME}} 하실 분? :fire:',
+    3: '수요일, {{EVENT_NAME}}으로 주중 고비를 넘겨봅시다 :mountain:',
+    4: '목요일, 거의 다 왔어요! {{EVENT_NAME}} 함께해요 :runner:',
+    5: '불금 전야! {{EVENT_NAME}} 참여하실 분? :tada:',
+  };
+
+  return dayMessages[dayOfWeek] || getRandomMessage();
+}
+
+/**
+ * Return all messages (for management/testing)
+ */
+export function getAllMessages(): string[] {
+  return [...MESSAGES];
+}

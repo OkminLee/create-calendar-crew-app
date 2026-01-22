@@ -1,0 +1,22 @@
+name = "{{APP_NAME_KEBAB}}-worker"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# Cron trigger (KST = UTC + 9)
+# Example: "0 1 * * 1-5" = Weekdays 10:00 AM KST
+[triggers]
+crons = ["{{CRON_SCHEDULE}}"]
+
+# Environment variables (non-sensitive)
+[vars]
+# {{#ENABLE_SLACK}}
+SLACK_CHANNEL = "{{SLACK_CHANNEL}}"
+# {{/ENABLE_SLACK}}
+
+# Secrets (set via: wrangler secret put <NAME>)
+# - FIREBASE_PROJECT_ID: Firebase project ID
+# - FIREBASE_CLIENT_EMAIL: Service account email
+# - FIREBASE_PRIVATE_KEY: Service account private key
+# {{#ENABLE_SLACK}}
+# - SLACK_BOT_TOKEN: Bot User OAuth Token (xoxb-...)
+# {{/ENABLE_SLACK}}

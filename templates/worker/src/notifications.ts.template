@@ -1,0 +1,150 @@
+/**
+ * Push notification handlers
+ * - Comment creation notification
+ * - Reaction notification
+ */
+
+import { sendFcmNotifications, type FirebaseEnv, type NotificationPayload } from './fcm';
+import { getTokensForUser } from './firestore';
+
+export interface Comment {
+  author: string;
+  content: string;
+  parentId: string | null;
+  mentions: string[];
+}
+
+export interface CommentNotifyRequest {
+  dateId: string;
+  comment: Comment;
+  parentComment?: Comment;
+  participants: string[];
+}
+
+export interface ReactionNotifyRequest {
+  commentAuthor: string;
+  reactor: string;
+  emoji: string;
+}
+
+/**
+ * Send notification on comment creation
+ */
+export async function handleCommentNotification(
+  env: FirebaseEnv,
+  request: CommentNotifyRequest
+): Promise<{ success: boolean; sent: number }> {
+  const { dateId, comment, parentComment, participants } = request;
+  const notifications: NotificationPayload[] = [];
+
+  // 1. Reply to parent comment: notify parent comment author
+  if (comment.parentId && parentComment) {
+    if (parentComment.author !== comment.author) {
+      const tokens = await getTokensForUser(env, parentComment.author, 'onReply');
+      for (const token of tokens) {
+        notifications.push({
+          token,
+          title: '새 답글',
+          body: `${comment.author}님이 답글을 달았습니다: ${truncate(comment.content)}`,
+        });
+      }
+    }
+  }
+
+  // 2. Notify mentioned users
+  for (const mentionedUser of comment.mentions || []) {
+    if (mentionedUser !== comment.author) {
+      const tokens = await getTokensForUser(env, mentionedUser, 'onMention');
+      for (const token of tokens) {
+        notifications.push({
+          token,
+          title: '멘션됨',
+          body: `${comment.author}님이 회원님을 멘션했습니다: ${truncate(comment.content)}`,
+        });
+      }
+    }
+  }
+
+  // 3. Notify participants of new comment (parent comment only)
+  if (!comment.parentId) {
+    for (const participant of participants) {
+      if (participant !== comment.author) {
+        const tokens = await getTokensForUser(env, participant, 'onNewComment');
+        for (const token of tokens) {
+          notifications.push({
+            token,
+            title: `${formatDateId(dateId)} 새 댓글`,
+            body: `${comment.author}: ${truncate(comment.content)}`,
+          });
+        }
+      }
+    }
+  }
+
+  // Remove duplicates and send
+  const uniqueNotifications = removeDuplicates(notifications);
+  const sent = await sendFcmNotifications(env, uniqueNotifications);
+
+  console.log(`[Notifications] Comment: ${sent}/${uniqueNotifications.length} sent`);
+
+  return { success: true, sent };
+}
+
+/**
+ * Send notification on reaction
+ */
+export async function handleReactionNotification(
+  env: FirebaseEnv,
+  request: ReactionNotifyRequest
+): Promise<{ success: boolean; sent: number }> {
+  const { commentAuthor, reactor, emoji } = request;
+
+  // Don't notify self
+  if (reactor === commentAuthor) {
+    return { success: true, sent: 0 };
+  }
+
+  const tokens = await getTokensForUser(env, commentAuthor, 'onReaction');
+  const notifications: NotificationPayload[] = tokens.map((token) => ({
+    token,
+    title: '리액션',
+    body: `${reactor}님이 ${emoji} 리액션을 남겼습니다`,
+  }));
+
+  const sent = await sendFcmNotifications(env, notifications);
+
+  console.log(`[Notifications] Reaction: ${sent}/${notifications.length} sent`);
+
+  return { success: true, sent };
+}
+
+/**
+ * Remove duplicate notifications (same token + title)
+ */
+function removeDuplicates(notifications: NotificationPayload[]): NotificationPayload[] {
+  const seen = new Set<string>();
+  return notifications.filter((n) => {
+    const key = `${n.token}-${n.title}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/**
+ * Truncate string
+ */
+function truncate(str: string, maxLength = 30): string {
+  if (str.length <= maxLength) return str;
+  return str.slice(0, maxLength) + '...';
+}
+
+/**
+ * Format date ID (2025-01-21 -> 1월 21일)
+ */
+function formatDateId(dateId: string): string {
+  const parts = dateId.split('-');
+  if (parts.length < 3) return dateId;
+  const [, month, day] = parts;
+  return `${parseInt(month)}월 ${parseInt(day)}일`;
+}

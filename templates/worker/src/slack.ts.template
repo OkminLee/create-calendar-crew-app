@@ -1,0 +1,119 @@
+/**
+ * Slack API integration
+ * Optional feature - only included when ENABLE_SLACK is true
+ */
+
+const SLACK_API_BASE = 'https://slack.com/api';
+
+interface SlackResponse {
+  ok: boolean;
+  error?: string;
+  ts?: string; // Message timestamp (used as message ID)
+  channel?: string;
+}
+
+/**
+ * Post message to Slack channel
+ * @param token Bot User OAuth Token (xoxb-...)
+ * @param channel Channel name or channel ID
+ * @param text Message content
+ * @returns Slack API response
+ */
+export async function postMessage(
+  token: string,
+  channel: string,
+  text: string
+): Promise<SlackResponse> {
+  const response = await fetch(`${SLACK_API_BASE}/chat.postMessage`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      channel,
+      text,
+      // Block Kit for richer message composition
+      blocks: [
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text,
+          },
+        },
+        {
+          type: 'context',
+          elements: [
+            {
+              type: 'mrkdwn',
+              text: ':{{EMOJI_POSITIVE}}: = 참석 | :{{EMOJI_NEGATIVE}}: = 불참',
+            },
+          ],
+        },
+      ],
+    }),
+  });
+
+  return response.json() as Promise<SlackResponse>;
+}
+
+/**
+ * Add emoji reaction to message
+ * @param token Bot User OAuth Token
+ * @param channel Channel name or channel ID
+ * @param timestamp Message timestamp
+ * @param emoji Emoji name (without colons, e.g. 'coffee')
+ * @returns Slack API response
+ */
+export async function addReaction(
+  token: string,
+  channel: string,
+  timestamp: string,
+  emoji: string
+): Promise<SlackResponse> {
+  const response = await fetch(`${SLACK_API_BASE}/reactions.add`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      channel,
+      timestamp,
+      name: emoji,
+    }),
+  });
+
+  return response.json() as Promise<SlackResponse>;
+}
+
+/**
+ * Get channel ID (use when you need to find ID from channel name)
+ * @param token Bot User OAuth Token
+ * @param channelName Channel name (without #)
+ * @returns Channel ID or null
+ */
+export async function getChannelId(
+  token: string,
+  channelName: string
+): Promise<string | null> {
+  const response = await fetch(`${SLACK_API_BASE}/conversations.list`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json() as {
+    ok: boolean;
+    channels?: Array<{ id: string; name: string }>;
+  };
+
+  if (!data.ok || !data.channels) {
+    return null;
+  }
+
+  const channel = data.channels.find((ch) => ch.name === channelName);
+  return channel?.id || null;
+}

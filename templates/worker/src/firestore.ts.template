@@ -1,0 +1,185 @@
+/**
+ * Firestore REST API service
+ * - User FCM token retrieval
+ * - Notification settings check
+ */
+
+import type { FirebaseEnv } from './fcm';
+
+export interface NotificationSettings {
+  onReply: boolean;
+  onReaction: boolean;
+  onMention: boolean;
+  onNewComment: boolean;
+}
+
+export interface UserToken {
+  token: string;
+  userName: string;
+  settings: NotificationSettings;
+}
+
+const DEFAULT_SETTINGS: NotificationSettings = {
+  onReply: true,
+  onReaction: true,
+  onMention: true,
+  onNewComment: true,
+};
+
+/**
+ * Get user's FCM tokens (with notification settings check)
+ */
+export async function getTokensForUser(
+  env: FirebaseEnv,
+  userName: string,
+  settingKey: keyof NotificationSettings
+): Promise<string[]> {
+  try {
+    const accessToken = await getFirestoreAccessToken(env);
+
+    const url = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents:runQuery`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        structuredQuery: {
+          from: [{ collectionId: 'fcm_tokens' }],
+          where: {
+            fieldFilter: {
+              field: { fieldPath: 'userName' },
+              op: 'EQUAL',
+              value: { stringValue: userName },
+            },
+          },
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('[Firestore] Query failed:', await response.text());
+      return [];
+    }
+
+    const results = (await response.json()) as Array<{
+      document?: {
+        fields: {
+          token: { stringValue: string };
+          settings?: {
+            mapValue: {
+              fields: Record<string, { booleanValue: boolean }>;
+            };
+          };
+        };
+      };
+    }>;
+
+    const tokens: string[] = [];
+
+    for (const result of results) {
+      if (!result.document) continue;
+
+      const fields = result.document.fields;
+      const token = fields.token?.stringValue;
+
+      // Check settings (default: true)
+      const settingsMap = fields.settings?.mapValue?.fields;
+      const settings: NotificationSettings = settingsMap
+        ? {
+            onReply: settingsMap.onReply?.booleanValue ?? DEFAULT_SETTINGS.onReply,
+            onReaction: settingsMap.onReaction?.booleanValue ?? DEFAULT_SETTINGS.onReaction,
+            onMention: settingsMap.onMention?.booleanValue ?? DEFAULT_SETTINGS.onMention,
+            onNewComment: settingsMap.onNewComment?.booleanValue ?? DEFAULT_SETTINGS.onNewComment,
+          }
+        : DEFAULT_SETTINGS;
+
+      if (token && settings[settingKey]) {
+        tokens.push(token);
+      }
+    }
+
+    return tokens;
+  } catch (error) {
+    console.error('[Firestore] Error:', error);
+    return [];
+  }
+}
+
+/**
+ * Generate Firestore Access Token
+ */
+async function getFirestoreAccessToken(env: FirebaseEnv): Promise<string> {
+  const now = Math.floor(Date.now() / 1000);
+  const expiry = now + 3600;
+
+  const header = { alg: 'RS256', typ: 'JWT' };
+
+  const payload = {
+    iss: env.FIREBASE_CLIENT_EMAIL,
+    sub: env.FIREBASE_CLIENT_EMAIL,
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now,
+    exp: expiry,
+    scope: 'https://www.googleapis.com/auth/datastore',
+  };
+
+  const jwt = await createJWT(header, payload, env.FIREBASE_PRIVATE_KEY);
+
+  const response = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion: jwt,
+    }),
+  });
+
+  const data = (await response.json()) as { access_token: string };
+  return data.access_token;
+}
+
+async function createJWT(
+  header: object,
+  payload: object,
+  privateKeyPem: string
+): Promise<string> {
+  const encoder = new TextEncoder();
+
+  const headerB64 = base64UrlEncode(JSON.stringify(header));
+  const payloadB64 = base64UrlEncode(JSON.stringify(payload));
+  const unsignedToken = `${headerB64}.${payloadB64}`;
+
+  const pemContents = privateKeyPem
+    .replace(/-----BEGIN PRIVATE KEY-----/, '')
+    .replace(/-----END PRIVATE KEY-----/, '')
+    .replace(/\\n/g, '')
+    .replace(/\n/g, '')
+    .trim();
+
+  const binaryKey = Uint8Array.from(atob(pemContents), (c) => c.charCodeAt(0));
+
+  const cryptoKey = await crypto.subtle.importKey(
+    'pkcs8',
+    binaryKey,
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+
+  const signature = await crypto.subtle.sign(
+    'RSASSA-PKCS1-v1_5',
+    cryptoKey,
+    encoder.encode(unsignedToken)
+  );
+
+  const signatureB64 = base64UrlEncode(String.fromCharCode(...new Uint8Array(signature)));
+
+  return `${unsignedToken}.${signatureB64}`;
+}
+
+function base64UrlEncode(str: string): string {
+  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}

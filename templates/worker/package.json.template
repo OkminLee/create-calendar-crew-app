@@ -1,0 +1,19 @@
+{
+  "name": "{{APP_NAME_KEBAB}}-worker",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker for {{APP_NAME}} - {{EVENT_NAME}} scheduler and notifications",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "wrangler dev --test-scheduled"
+  },
+  "keywords": ["cloudflare-workers", "scheduler", "notifications"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240117.0",
+    "typescript": "^5.3.3",
+    "wrangler": "^3.24.0"
+  }
+}
