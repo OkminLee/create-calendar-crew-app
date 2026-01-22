@@ -1,0 +1,25 @@
+{
+  "name": "create-calendar-crew-app",
+  "version": "1.0.0",
+  "description": "범용 캘린더 기반 참여 신청 웹앱 생성기",
+  "main": "scripts/generate.ts",
+  "scripts": {
+    "generate": "npx ts-node scripts/generate.ts",
+    "test": "echo \"No tests yet\""
+  },
+  "keywords": [
+    "calendar",
+    "crew",
+    "pwa",
+    "react",
+    "cloudflare-workers",
+    "firebase"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  }
+}
