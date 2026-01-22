@@ -1,6 +1,46 @@
 # Create Calendar Crew App
 
-범용 캘린더 기반 참여 신청 웹앱을 생성하는 Claude Code Skill입니다.
+범용 캘린더 기반 참여 신청 웹앱을 생성하는 Claude Code Plugin입니다.
+
+## 설치 방법
+
+### 옵션 1: settings.json에 추가 (권장)
+
+`~/.claude/settings.json` 파일에 다음을 추가하세요:
+
+```json
+{
+  "plugins": {
+    "create-calendar-crew-app@github:okminlee/create-calendar-crew-app": "enabled"
+  }
+}
+```
+
+### 옵션 2: /plugin 명령어로 설치
+
+Claude Code에서 다음 명령어를 실행하세요:
+
+```
+/plugin install create-calendar-crew-app@github:okminlee/create-calendar-crew-app
+```
+
+### 옵션 3: 로컬 설치 (개발/테스트용)
+
+```bash
+git clone https://github.com/okminlee/create-calendar-crew-app.git ~/.claude/plugins/create-calendar-crew-app
+```
+
+그 다음 `~/.claude/settings.json`에 추가:
+
+```json
+{
+  "plugins": [
+    { "type": "local", "path": "~/.claude/plugins/create-calendar-crew-app" }
+  ]
+}
+```
+
+---
 
 ## 개요
 
